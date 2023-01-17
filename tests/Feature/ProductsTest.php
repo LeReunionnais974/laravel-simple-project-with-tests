@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use App\Models\User;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -11,9 +12,23 @@ class ProductsTest extends TestCase
 {
     use RefreshDatabase;
 
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = $this->createUser();
+    }
+
+    public function createUser(): User
+    {
+        return User::factory()->create();
+    }
+
     public function test_products_page_does_not_contains_products()
     {
-        $response = $this->get('/products');
+        $response = $this->actingAs($this->user)->get('dashboard/products');
 
         $response->assertStatus(200);
         $response->assertSee('No products found');
@@ -26,7 +41,7 @@ class ProductsTest extends TestCase
             'price' => 19.99,
         ]);
 
-        $response = $this->get('/products');
+        $response = $this->actingAs($this->user)->get('dashboard/products');
 
         $response->assertStatus(200);
         $response->assertDontSee('No products found');
@@ -40,7 +55,7 @@ class ProductsTest extends TestCase
         $products = Product::factory(6)->create();
         $lastProduct = $products->last();
 
-        $response = $this->get('/products');
+        $response = $this->actingAs($this->user)->get('dashboard/products');
 
         $response->assertStatus(200);
         $response->assertDontSee('No products found');
@@ -51,7 +66,7 @@ class ProductsTest extends TestCase
 
     public function test_product_save_has_failed_and_redirect_back()
     {
-        $response = $this->post('products', [
+        $response = $this->actingAs($this->user)->post('dashboard/products', [
             'name' => 'Pr',
             'price' => ''
         ]);
@@ -67,7 +82,7 @@ class ProductsTest extends TestCase
             'price' => 19.99,
         ];
 
-        $response = $this->post('products', $product);
+        $response = $this->actingAs($this->user)->post('dashboard/products', $product);
         $response->assertStatus(302);
 
         $lastProduct = Product::latest()->first();
@@ -78,11 +93,11 @@ class ProductsTest extends TestCase
         $this->assertEquals($product['price'], $lastProduct->price);
     }
 
-    public function test_product_edit_form_has_correct_value_in_product_show_page()
+    public function test_product_edit_form_has_correct_value_in_product_edit_product_page()
     {
         $product = Product::factory()->create();
 
-        $response = $this->get('products/' . $product->id);
+        $response = $this->actingAs($this->user)->get('dashboard/products/' . $product->id . '/edit');
         $response->assertStatus(200);
         $response->assertSee('value="' . $product->name . '"', false);
         $response->assertSee('value="' . $product->price . '"', false);
@@ -93,7 +108,7 @@ class ProductsTest extends TestCase
     {
         $product = Product::factory()->create();
 
-        $response = $this->put('products/' . $product->id, [
+        $response = $this->actingAs($this->user)->put('dashboard/products/' . $product->id, [
             'name' => 'Pr',
             'price' => ''
         ]);
@@ -111,7 +126,7 @@ class ProductsTest extends TestCase
             'price' => 24.99
         ];
 
-        $response = $this->put('products/' . $product->id, $pendingValues);
+        $response = $this->actingAs($this->user)->put('dashboard/products/' . $product->id, $pendingValues);
 
         $response->assertStatus(302);
 
@@ -125,10 +140,10 @@ class ProductsTest extends TestCase
     {
         $product = Product::factory()->create();
 
-        $response = $this->delete('products/' . $product->id);
+        $response = $this->actingAs($this->user)->delete('dashboard/products/' . $product->id);
 
         $response->assertStatus(302);
-        $response->assertRedirect('products');
+        $response->assertRedirect('dashboard/products');
 
         $this->assertDatabaseMissing('products', $product->toArray());
         $this->assertDatabaseCount('products', 0);
