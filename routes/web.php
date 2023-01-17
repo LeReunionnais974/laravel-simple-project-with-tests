@@ -19,13 +19,13 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::prefix('dashboard')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
     Route::get('/', function () {
         return view('dashboard');
     })->name('dashboard');
 
     Route::resource('products', ProductController::class);
-})->middleware(['auth', 'verified'])->name('dashboard');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
