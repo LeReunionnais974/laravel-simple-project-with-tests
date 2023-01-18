@@ -26,6 +26,18 @@ class ProductsTest extends TestCase
         return User::factory()->create();
     }
 
+    public function test_user_can_access_to_page_products_after_auth()
+    {
+        $response = $this->actingAs($this->user)->get('dashboard/products');
+
+        $this->assertAuthenticated();
+
+        $response->assertStatus(200);
+        $response->assertSee('Products');
+        $response->assertSee($this->user->first_name);
+        $response->assertSee($this->user->last_name);
+    }
+
     public function test_products_page_does_not_contains_products()
     {
         $response = $this->actingAs($this->user)->get('dashboard/products');
@@ -64,6 +76,14 @@ class ProductsTest extends TestCase
         });
     }
 
+    public function test_user_can_access_to_create_product_page()
+    {
+        $response = $this->actingAs($this->user)->get('dashboard/products/create');
+
+        $response->assertStatus(200);
+        $response->assertSee('Add product');
+    }
+
     public function test_product_save_has_failed_and_redirect_back()
     {
         $response = $this->actingAs($this->user)->post('dashboard/products', [
@@ -91,6 +111,15 @@ class ProductsTest extends TestCase
         $this->assertDatabaseHas('products', $lastProduct->toArray());
         $this->assertEquals($product['name'], $lastProduct->name);
         $this->assertEquals($product['price'], $lastProduct->price);
+    }
+
+    public function test_user_can_access_to_edit_product_page()
+    {
+        $product = Product::factory()->create();
+
+        $response = $this->actingAs($this->user)->get('dashboard/products/' . $product->id . '/edit');
+        $response->assertStatus(200);
+        $response->assertSee('Update product informations');
     }
 
     public function test_product_edit_form_has_correct_value_in_product_edit_product_page()
