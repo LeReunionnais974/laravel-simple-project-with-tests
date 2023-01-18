@@ -8,6 +8,11 @@ use App\Http\Requests\StoreProductRequest;
 
 class ProductController extends Controller
 {
+    public function __construct()
+    {
+        $this->authorizeResource(Product::class, 'product');
+    }
+
     public function index()
     {
         return view('products.index', [
