@@ -8,22 +8,26 @@ use App\Models\Product;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
-class ProductsTest extends TestCase
+class ProductTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $user;
+    private User $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = $this->createUser();
+        $this->admin = $this->createUser(true);
     }
 
-    public function createUser(): User
+    public function createUser(bool $admin = false): User
     {
-        return User::factory()->create();
+        return User::factory()->create([
+            'is_admin' => $admin,
+        ]);
     }
 
     public function test_user_can_access_to_page_products_after_auth()
@@ -76,9 +80,16 @@ class ProductsTest extends TestCase
         });
     }
 
-    public function test_user_can_access_to_create_product_page()
+    public function test_user_can_not_access_to_create_product_page()
     {
         $response = $this->actingAs($this->user)->get('dashboard/products/create');
+
+        $response->assertForbidden();
+    }
+
+    public function test_admin_can_access_to_create_product_page()
+    {
+        $response = $this->actingAs($this->admin)->get('dashboard/products/create');
 
         $response->assertStatus(200);
         $response->assertSee('Add product');
@@ -86,7 +97,7 @@ class ProductsTest extends TestCase
 
     public function test_product_save_has_failed_and_redirect_back()
     {
-        $response = $this->actingAs($this->user)->post('dashboard/products', [
+        $response = $this->actingAs($this->admin)->post('dashboard/products', [
             'name' => 'Pr',
             'price' => ''
         ]);
@@ -102,7 +113,7 @@ class ProductsTest extends TestCase
             'price' => 19.99,
         ];
 
-        $response = $this->actingAs($this->user)->post('dashboard/products', $product);
+        $response = $this->actingAs($this->admin)->post('dashboard/products', $product);
         $response->assertStatus(302);
 
         $lastProduct = Product::latest()->first();
@@ -113,11 +124,20 @@ class ProductsTest extends TestCase
         $this->assertEquals($product['price'], $lastProduct->price);
     }
 
-    public function test_user_can_access_to_edit_product_page()
+    public function test_user_can_not_access_to_edit_product_page()
     {
         $product = Product::factory()->create();
 
         $response = $this->actingAs($this->user)->get('dashboard/products/' . $product->id . '/edit');
+
+        $response->assertForbidden();
+    }
+
+    public function test_admin_can_access_to_edit_product_page()
+    {
+        $product = Product::factory()->create();
+
+        $response = $this->actingAs($this->admin)->get('dashboard/products/' . $product->id . '/edit');
         $response->assertStatus(200);
         $response->assertSee('Update product informations');
     }
@@ -126,7 +146,7 @@ class ProductsTest extends TestCase
     {
         $product = Product::factory()->create();
 
-        $response = $this->actingAs($this->user)->get('dashboard/products/' . $product->id . '/edit');
+        $response = $this->actingAs($this->admin)->get('dashboard/products/' . $product->id . '/edit');
         $response->assertStatus(200);
         $response->assertSee('value="' . $product->name . '"', false);
         $response->assertSee('value="' . $product->price . '"', false);
@@ -137,7 +157,7 @@ class ProductsTest extends TestCase
     {
         $product = Product::factory()->create();
 
-        $response = $this->actingAs($this->user)->put('dashboard/products/' . $product->id, [
+        $response = $this->actingAs($this->admin)->put('dashboard/products/' . $product->id, [
             'name' => 'Pr',
             'price' => ''
         ]);
@@ -155,7 +175,7 @@ class ProductsTest extends TestCase
             'price' => 24.99
         ];
 
-        $response = $this->actingAs($this->user)->put('dashboard/products/' . $product->id, $pendingValues);
+        $response = $this->actingAs($this->admin)->put('dashboard/products/' . $product->id, $pendingValues);
 
         $response->assertStatus(302);
 
@@ -165,11 +185,20 @@ class ProductsTest extends TestCase
         $response->assertRedirectToRoute('products.show', ['product' => $product->id]);
     }
 
-    public function test_product_deleted_successfully()
+    public function test_user_can_not_delete_product()
     {
         $product = Product::factory()->create();
 
         $response = $this->actingAs($this->user)->delete('dashboard/products/' . $product->id);
+
+        $response->assertForbidden();
+    }
+
+    public function test_product_deleted_successfully()
+    {
+        $product = Product::factory()->create();
+
+        $response = $this->actingAs($this->admin)->delete('dashboard/products/' . $product->id);
 
         $response->assertStatus(302);
         $response->assertRedirect('dashboard/products');
